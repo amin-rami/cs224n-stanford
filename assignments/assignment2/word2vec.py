@@ -17,10 +17,7 @@ def sigmoid(x):
     s -- sigmoid(x)
     """
 
-    ### YOUR CODE HERE (~1 Line)
-
-    ### END YOUR CODE
-
+    s = 1 / (1 + np.exp(-x))
     return s
 
 
@@ -59,13 +56,13 @@ def naiveSoftmaxLossAndGradient(
                     (dJ / dU)
     """
 
-    ### YOUR CODE HERE (~6-8 Lines)
+    y_hat = softmax(centerWordVec.reshape((1, -1)) @ outsideVectors.T).T
+    loss = -1 * np.log(y_hat[outsideWordIdx, 0])
+    gradCenterVec = (outsideVectors.T @ y_hat - outsideVectors[[outsideWordIdx], :].T).squeeze()
 
-    ### Please use the provided softmax function (imported earlier in this file)
-    ### This numerically stable implementation helps you avoid issues pertaining
-    ### to integer overflow. 
-
-    ### END YOUR CODE
+    gradOutsideVecs = centerWordVec.reshape((-1, 1)) @ y_hat.T
+    gradOutsideVecs[:, outsideWordIdx] -= centerWordVec
+    gradOutsideVecs = gradOutsideVecs.T
 
     return loss, gradCenterVec, gradOutsideVecs
 
@@ -108,11 +105,18 @@ def negSamplingLossAndGradient(
     negSampleWordIndices = getNegativeSamples(outsideWordIdx, dataset, K)
     indices = [outsideWordIdx] + negSampleWordIndices
 
-    ### YOUR CODE HERE (~10 Lines)
+    vals = (outsideVectors[indices, :] @ centerWordVec.reshape((-1, 1))).squeeze()
+    vals[1:] *= -1
+    probes = sigmoid(vals)
+    loss = np.sum(-np.log(probes))
 
-    ### Please use your implementation of sigmoid in here.
+    weights = 1 - probes
+    weights[0] *= -1
+    gradCenterVec = (weights.reshape((1, -1)) @ outsideVectors[indices, :]).squeeze() 
 
-    ### END YOUR CODE
+    gradOutsideVecs = np.zeros(outsideVectors.shape)
+    for i, index in enumerate(indices):
+        gradOutsideVecs[index] += weights[i] * centerWordVec
 
     return loss, gradCenterVec, gradOutsideVecs
 
@@ -156,10 +160,22 @@ def skipgram(currentCenterWord, windowSize, outsideWords, word2Ind,
     gradCenterVecs = np.zeros(centerWordVectors.shape)
     gradOutsideVectors = np.zeros(outsideVectors.shape)
 
-    ### YOUR CODE HERE (~8 Lines)
+    c_index = word2Ind[currentCenterWord]
+    out_indices = [word2Ind[outsideWord] for outsideWord in outsideWords]
 
-    ### END YOUR CODE
-    
+    for i, outsideWord in enumerate(outsideWords):
+
+        t_loss, t_gradCenterVec, t_gradOutsideVec = word2vecLossAndGradient(
+            centerWordVectors[c_index, :],
+            out_indices[i],
+            outsideVectors,
+            dataset
+        )
+
+        loss += t_loss
+        gradCenterVecs[c_index, :] += t_gradCenterVec
+        gradOutsideVectors += t_gradOutsideVec
+
     return loss, gradCenterVecs, gradOutsideVectors
 
 
