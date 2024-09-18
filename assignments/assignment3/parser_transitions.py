@@ -22,24 +22,6 @@ class PartialParse(object):
         self.buffer = list(sentence)
         self.dependencies = []
 
-        ### YOUR CODE HERE (3 Lines)
-        ### Your code should initialize the following fields:
-        ###     self.stack: The current stack represented as a list with the top of the stack as the
-        ###                 last element of the list.
-        ###     self.buffer: The current buffer represented as a list with the first item on the
-        ###                  buffer as the first item of the list
-        ###     self.dependencies: The list of dependencies produced so far. Represented as a list of
-        ###             tuples where each tuple is of the form (head, dependent).
-        ###             Order for this list doesn't matter.
-        ###
-        ### Note: The root token should be represented with the string "ROOT"
-        ### Note: If you need to use the sentence object to initialize anything, make sure to not directly 
-        ###       reference the sentence object.  That is, remember to NOT modify the sentence object. 
-
-
-        ### END YOUR CODE
-
-
     def parse_step(self, transition):
         """Performs a single parse step by applying the given transition to this partial parse
 
@@ -71,6 +53,10 @@ class PartialParse(object):
             self.parse_step(transition)
         return self.dependencies
 
+    @property
+    def is_finished(self):
+        return len(self.buffer) == 0 and len(self.stack) == 1
+
 
 def minibatch_parse(sentences, model, batch_size):
     """Parses a list of sentences in minibatches using a model.
@@ -90,27 +76,21 @@ def minibatch_parse(sentences, model, batch_size):
                                                     same as in sentences (i.e., dependencies[i] should
                                                     contain the parse for sentences[i]).
     """
-    dependencies = []
+    partial_parsers_tuple = [(index, PartialParse(sent)) for index, sent in enumerate(sentences)]
+    dependencies = [None] * len(partial_parsers_tuple)
 
-    ### YOUR CODE HERE (~8-10 Lines)
-    ### TODO:
-    ###     Implement the minibatch parse algorithm.  Note that the pseudocode for this algorithm is given in the pdf handout.
-    ###
-    ###     Note: A shallow copy (as denoted in the PDF) can be made with the "=" sign in python, e.g.
-    ###                 unfinished_parses = partial_parses[:].
-    ###             Here `unfinished_parses` is a shallow copy of `partial_parses`.
-    ###             In Python, a shallow copied list like `unfinished_parses` does not contain new instances
-    ###             of the object stored in `partial_parses`. Rather both lists refer to the same objects.
-    ###             In our case, `partial_parses` contains a list of partial parses. `unfinished_parses`
-    ###             contains references to the same objects. Thus, you should NOT use the `del` operator
-    ###             to remove objects from the `unfinished_parses` list. This will free the underlying memory that
-    ###             is being accessed by `partial_parses` and may cause your code to crash.
-
-
-    ### END YOUR CODE
+    while partial_parsers_tuple:
+        batch = partial_parsers_tuple[:batch_size]
+        transitions = model.predict([pp for _, pp in batch])
+        for i, transition in enumerate(transitions):
+            batch[i][1].parse_step(transition)
+        
+        for index, pp in batch:
+            if pp.is_finished:
+                dependencies[index] = pp.dependencies
+                partial_parsers_tuple.pop(index)
 
     return dependencies
-
 
 def test_step(name, transition, stack, buf, deps,
               ex_stack, ex_buf, ex_deps):
