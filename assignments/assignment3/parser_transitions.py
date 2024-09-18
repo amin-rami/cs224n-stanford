@@ -76,19 +76,20 @@ def minibatch_parse(sentences, model, batch_size):
                                                     same as in sentences (i.e., dependencies[i] should
                                                     contain the parse for sentences[i]).
     """
-    partial_parsers_tuple = [(index, PartialParse(sent)) for index, sent in enumerate(sentences)]
-    dependencies = [None] * len(partial_parsers_tuple)
+    partial_parsers = [(index, PartialParse(sent)) for index, sent in enumerate(sentences)]
+    dependencies = [None] * len(partial_parsers)
 
-    while partial_parsers_tuple:
-        batch = partial_parsers_tuple[:batch_size]
+    while partial_parsers:
+        batch = partial_parsers[:batch_size]
         transitions = model.predict([pp for _, pp in batch])
         for i, transition in enumerate(transitions):
             batch[i][1].parse_step(transition)
         
-        for index, pp in batch:
+        for item in batch:
+            index, pp = item
             if pp.is_finished:
                 dependencies[index] = pp.dependencies
-                partial_parsers_tuple.pop(index)
+                partial_parsers.remove(item)
 
     return dependencies
 
