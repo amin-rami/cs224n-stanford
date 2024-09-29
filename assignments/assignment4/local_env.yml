@@ -1,4 +1,4 @@
-name: local_nmt
+name: a4
 channels:
   - pytorch
   - defaults
