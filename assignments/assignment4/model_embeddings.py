@@ -36,3 +36,9 @@ class ModelEmbeddings(nn.Module):
 
         self.source = nn.Embedding(len(vocab.src), embed_size, padding_idx=src_pad_token_idx)
         self.target = nn.Embedding(len(vocab.tgt), embed_size, padding_idx=tgt_pad_token_idx)
+
+    def forward(self, x, mode):
+        if mode == 'source':
+            return self.source(x)
+        if mode == 'target':
+            return self.target(x)
