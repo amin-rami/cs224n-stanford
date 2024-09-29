@@ -55,8 +55,8 @@ class NMT(nn.Module):
         self.gen_sanity_check = False
         self.counter = 0
 
-        self.encoder = nn.LSTM(embed_size, hidden_size, num_layers=2, bidirectional=True)
-        self.decoder = nn.LSTM(embed_size + hidden_size, hidden_size, num_layers=2)
+        self.encoder = nn.LSTM(embed_size, hidden_size, bidirectional=True)
+        self.decoder = nn.LSTM(embed_size + hidden_size, hidden_size)
         self.h_projection = nn.Linear(2 * hidden_size, hidden_size, bias=False)
         self.c_projection = nn.Linear(2 * hidden_size, hidden_size, bias=False)
         self.att_projection = nn.Linear(2 * hidden_size, hidden_size, bias=False)
@@ -118,9 +118,9 @@ class NMT(nn.Module):
         """
         enc_hiddens, dec_init_state = None, None
 
-        X = self.model_embeddings(source_padded)
+        X = self.model_embeddings(source_padded, 'source')
         X = pack_padded_sequence(X, source_lengths)
-        enc_hiddens, dec_init_state = self.encode(X)
+        enc_hiddens, dec_init_state = self.encoder(X)
         enc_hiddens, _ = pad_packed_sequence(enc_hiddens)
         enc_hiddens = torch.permute(enc_hiddens, (1, 0, 2))
         h_0 = torch.flatten(torch.permute(dec_init_state[0], (1, 0, 2)), 1)
