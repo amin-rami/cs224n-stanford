@@ -243,35 +243,6 @@ class NMT(nn.Module):
         e_t = (torch.transpose(enc_hiddens_proj, 0, 1) * dec_state).sum(dim=-1)
         e_t = e_t.transpose(0, 1)
 
-
-        ### YOUR CODE HERE (~3 Lines)
-        ### TODO:
-        ###     1. Apply the decoder to `Ybar_t` and `dec_state`to obtain the new dec_state.
-        ###     2. Split dec_state into its two parts (dec_hidden, dec_cell)
-        ###     3. Compute the attention scores e_t, a Tensor shape (b, src_len). 
-        ###        Note: b = batch_size, src_len = maximum source length, h = hidden size.
-        ###
-        ###       Hints:
-        ###         - dec_hidden is shape (b, h) and corresponds to h^dec_t in the PDF (batched)
-        ###         - enc_hiddens_proj is shape (b, src_len, h) and corresponds to W_{attProj} h^enc (batched).
-        ###         - Use batched matrix multiplication (torch.bmm) to compute e_t (be careful about the input/ output shapes!)
-        ###         - To get the tensors into the right shapes for bmm, you will need to do some squeezing and unsqueezing.
-        ###         - When using the squeeze() function make sure to specify the dimension you want to squeeze
-        ###             over. Otherwise, you will remove the batch dimension accidentally, if batch_size = 1.
-        ###
-        ### Use the following docs to implement this functionality:
-        ###     Batch Multiplication:
-        ###        https://pytorch.org/docs/stable/torch.html#torch.bmm
-        ###     Tensor Unsqueeze:
-        ###         https://pytorch.org/docs/stable/torch.html#torch.unsqueeze
-        ###     Tensor Squeeze:
-        ###         https://pytorch.org/docs/stable/torch.html#torch.squeeze
-
-
-
-
-        ### END YOUR CODE
-
         # Set e_t to -inf where enc_masks has 1
         if enc_masks is not None:
             e_t.data.masked_fill_(enc_masks.bool(), -float('inf'))
