@@ -236,6 +236,14 @@ class NMT(nn.Module):
         """
         combined_output = None
 
+
+        hidden_out, dec_state = self.decoder(torch.unsqueeze(Ybar_t, 0), (torch.unsqueeze(dec_state[0], 0), torch.unsqueeze(dec_state[1], 0)))
+        hidden_out = torch.squeeze(hidden_out, 0)
+        dec_state = (torch.squeeze(dec_state[0], 0), torch.squeeze(dec_state[1], 0))
+        e_t = (torch.transpose(enc_hiddens_proj, 0, 1) * dec_state).sum(dim=-1)
+        e_t = e_t.transpose(0, 1)
+
+
         ### YOUR CODE HERE (~3 Lines)
         ### TODO:
         ###     1. Apply the decoder to `Ybar_t` and `dec_state`to obtain the new dec_state.
