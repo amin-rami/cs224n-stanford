@@ -237,50 +237,22 @@ class NMT(nn.Module):
         combined_output = None
 
 
-        hidden_out, dec_state = self.decoder(torch.unsqueeze(Ybar_t, 0), (torch.unsqueeze(dec_state[0], 0), torch.unsqueeze(dec_state[1], 0)))
-        hidden_out = torch.squeeze(hidden_out, 0)
+        dec_hidden, dec_state = self.decoder(torch.unsqueeze(Ybar_t, 0), (torch.unsqueeze(dec_state[0], 0), torch.unsqueeze(dec_state[1], 0)))
+        dec_hidden = torch.squeeze(dec_hidden, 0)
         dec_state = (torch.squeeze(dec_state[0], 0), torch.squeeze(dec_state[1], 0))
-        e_t = (torch.transpose(enc_hiddens_proj, 0, 1) * dec_state).sum(dim=-1)
-        e_t = e_t.transpose(0, 1)
+        e_t = torch.bmm(enc_hiddens_proj, torch.unsqueeze(dec_hidden, dim=-1))
+        e_t = e_t.squeeze(dim=-1)
 
         # Set e_t to -inf where enc_masks has 1
         if enc_masks is not None:
             e_t.data.masked_fill_(enc_masks.bool(), -float('inf'))
 
-        ### YOUR CODE HERE (~6 Lines)
-        ### TODO:
-        ###     1. Apply softmax to e_t to yield alpha_t
-        ###     2. Use batched matrix multiplication between alpha_t and enc_hiddens to obtain the
-        ###         attention output vector, a_t.
-        #$$     Hints:
-        ###           - alpha_t is shape (b, src_len)
-        ###           - enc_hiddens is shape (b, src_len, 2h)
-        ###           - a_t should be shape (b, 2h)
-        ###           - You will need to do some squeezing and unsqueezing.
-        ###     Note: b = batch size, src_len = maximum source length, h = hidden size.
-        ###
-        ###     3. Concatenate dec_hidden with a_t to compute tensor U_t
-        ###     4. Apply the combined output projection layer to U_t to compute tensor V_t
-        ###     5. Compute tensor O_t by first applying the Tanh function and then the dropout layer.
-        ###
-        ### Use the following docs to implement this functionality:
-        ###     Softmax:
-        ###         https://pytorch.org/docs/stable/nn.html#torch.nn.functional.softmax
-        ###     Batch Multiplication:
-        ###        https://pytorch.org/docs/stable/torch.html#torch.bmm
-        ###     Tensor View:
-        ###         https://pytorch.org/docs/stable/tensors.html#torch.Tensor.view
-        ###     Tensor Concatenation:
-        ###         https://pytorch.org/docs/stable/torch.html#torch.cat
-        ###     Tanh:
-        ###         https://pytorch.org/docs/stable/torch.html#torch.tanh
 
-
-
-
-
-        ### END YOUR CODE
-
+        alpha_t = F.softmax(e_t, dim=1)
+        a_t = torch.bmm(enc_hiddens.transpose(1, 2), alpha_t.unsqueeze(dim=-1)).squeeze(dim=-1)
+        U_t = torch.concatenate((a_t, dec_hidden), dim=1)
+        V_t = self.combined_output_projection(U_t)
+        O_t = self.dropout(torch.tanh(V_t))
         combined_output = O_t
         return dec_state, combined_output, e_t
 
